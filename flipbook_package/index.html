@@ -831,7 +831,8 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
-      cursor: zoom-out;
+      overflow: auto;
+      touch-action: pan-x pan-y pinch-zoom;
     }
     .lightbox-modal.active {
       display: flex;
@@ -842,9 +843,18 @@
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      cursor: zoom-in;
+      transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform-origin: center center;
+    }
+    .lightbox-modal img.zoomed {
+      max-width: none;
+      max-height: none;
+      width: 250vw;
+      cursor: zoom-out;
     }
     .lightbox-close-btn {
-      position: absolute;
+      position: fixed;
       top: 14px;
       right: 14px;
       background: rgba(255,255,255,0.25);
@@ -1246,9 +1256,9 @@
   </div>
 
   <!-- LIGHTBOX MODAL -->
-  <div class="lightbox-modal" id="lightboxModal" onclick="closeLightbox()">
+  <div class="lightbox-modal" id="lightboxModal" onclick="handleLightboxClick(event)">
     <button class="lightbox-close-btn" onclick="closeLightbox()">✕</button>
-    <img id="lightboxImg" src="" alt="Perbesar Slide">
+    <img id="lightboxImg" src="" alt="Perbesar Slide" onclick="toggleZoom(event)">
   </div>
 
   <script>
@@ -1550,6 +1560,7 @@
     function openLightbox(idx) {
       const modal = document.getElementById('lightboxModal');
       const img = document.getElementById('lightboxImg');
+      img.classList.remove('zoomed'); // reset zoom
       const filename = slideNames[idx];
       img.src = `pages/${filename}`;
       img.onerror = () => { img.src = `flipbook_package/pages/${filename}`; };
@@ -1557,7 +1568,34 @@
     }
 
     function closeLightbox() {
-      document.getElementById('lightboxModal').classList.remove('active');
+      const modal = document.getElementById('lightboxModal');
+      const img = document.getElementById('lightboxImg');
+      modal.classList.remove('active');
+      img.classList.remove('zoomed');
+    }
+
+    function handleLightboxClick(e) {
+      // Close if clicking outside the image
+      if (e.target.id === 'lightboxModal') {
+        closeLightbox();
+      }
+    }
+
+    function toggleZoom(e) {
+      const img = document.getElementById('lightboxImg');
+      const modal = document.getElementById('lightboxModal');
+      const isZoomed = img.classList.toggle('zoomed');
+      
+      if (isZoomed) {
+        // Calculate click position ratio to scroll to the clicked area
+        const rect = img.getBoundingClientRect();
+        // Since we scale the width to 250vw, we can roughly estimate scroll position
+        setTimeout(() => {
+          const scrollX = (e.clientX - rect.left) * 2.5 - (window.innerWidth / 2);
+          const scrollY = (e.clientY - rect.top) * 2.5 - (window.innerHeight / 2);
+          modal.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+        }, 10);
+      }
     }
 
     // Switch between Flipbook & HTML Reading Mode
